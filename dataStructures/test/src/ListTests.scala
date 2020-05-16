@@ -20,7 +20,7 @@ object ListTests extends TestSuite {
 
       test("from Nil throws") {
         intercept[NoSuchElementException] {
-          drop(Nil, 1)
+          drop(Nil, 1): Unit
         }
       }
     }
@@ -94,13 +94,13 @@ object ListTests extends TestSuite {
     }
 
     test("filter") {
-      var r = filter(List(1, 2, 3, 4))(_ % 2 == 0)
+      val r = filter(List(1, 2, 3, 4))(_ % 2 == 0)
       assert(r == List(2, 4))
       r
     }
 
     test("flatMap") {
-      var r = flatMap(List(1, 2, 3))(i => List(i, i))
+      val r = flatMap(List(1, 2, 3))(i => List(i, i))
       assert(r == List(1, 1, 2, 2, 3, 3))
       r
     }
@@ -127,7 +127,7 @@ object ListTests extends TestSuite {
       }
 
       test("with Nil should be Nil") {
-        var r = zipWith(Nil: List[Int])(Nil: List[Int])(_ + _)
+        val r = zipWith(Nil: List[Int])(Nil: List[Int])(_ + _)
         assert(r == Nil)
         r
       }
@@ -135,13 +135,13 @@ object ListTests extends TestSuite {
 
     test("hasSubsequence") {
       test("true") {
-        var r = hasSubsequence(List(1, 2, 3, 4), List(2, 3))
+        val r = hasSubsequence(List(1, 2, 3, 4), List(2, 3))
         assert(r == true)
         r
       }
 
       test("false") {
-        var r = hasSubsequence(List(1, 2, 3, 4), List(1, 3))
+        val r = hasSubsequence(List(1, 2, 3, 4), List(1, 3))
         assert(r == false)
         r
       }

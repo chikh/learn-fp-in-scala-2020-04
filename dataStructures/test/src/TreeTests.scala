@@ -18,7 +18,7 @@ object TreeTests extends TestSuite {
     }
 
     test("depth") {
-      var r = depth(
+      val r = depth(
         Branch(
           Branch(Leaf(1), Leaf(2)),
           Branch(Branch(Leaf(2), Leaf(3)), Leaf(4))
@@ -29,13 +29,13 @@ object TreeTests extends TestSuite {
     }
 
     test("map") {
-      var r = map(Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)))(_.toString)
+      val r = map(Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)))(_.toString)
       assert(r == Branch(Branch(Leaf("1"), Leaf("2")), Leaf("3")))
       r
     }
 
     test("fold") {
-      var r = fold(Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)))(identity)(_ + _)
+      val r = fold(Branch(Branch(Leaf(1), Leaf(2)), Leaf(3)))(identity)(_ + _)
       assert(r == 6)
       r
     }

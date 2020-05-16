@@ -21,7 +21,7 @@ object List {
     else
       l match {
         case Nil        => throw new NoSuchElementException("can't drop")
-        case Cons(h, t) => drop(t, n - 1)
+        case Cons(_, t) => drop(t, n - 1)
       }
 
   def foldRight[A, B](l: List[A])(z: B)(op: (A, B) => B): B = l match {
@@ -69,6 +69,6 @@ object List {
   def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = sup match {
     case l if (l == sub) => true
     case Nil => false
-    case Cons(h, t) => hasSubsequence(t, sub) || hasSubsequence(reverse(t), reverse(sub))
+    case Cons(_, t) => hasSubsequence(t, sub) || hasSubsequence(reverse(t), reverse(sub))
   }
 }
