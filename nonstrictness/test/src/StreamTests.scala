@@ -109,6 +109,26 @@ object StreamTests extends TestSuite {
         assert(r == false)
         r
       }
+
+      test("non-strictness") {
+        test("positive case: evals all the elems and all the tails") {
+          val (s, heads, tails) = countedStream(List(1, 2, 3))
+          s.forAll(_ != 42)
+
+          assert(heads == Map(1 -> 1, 2 -> 1, 3 -> 1))
+          val t = tailCountToReadble(tails)
+          assert(t == Map(Some(2) -> 1, Some(3) -> 1, None -> 1))
+        }
+
+        test("negative case: evals all the elems and tails until test fails") {
+          val (s, heads, tails) = countedStream(List(1, 2, 3, 4))
+          s.forAll(_ != 2)
+
+          assert(heads == Map(1 -> 1, 2 -> 1))
+          val t = tailCountToReadble(tails)
+          assert(t == Map(Some(2) -> 1))
+        }
+      }
     }
 
     test("takeWhile") {
@@ -260,10 +280,167 @@ object StreamTests extends TestSuite {
     test("unfold") {
       test("generates fibs stream") {
         val s = unfold((0, 1)) {
-          case (current, next) => Some((current, (next, current + next)))
+          case (current, next) =>
+            Some((() => current, () => (next, current + next)))
         }
         val r = s.take(6).toList
         assert(r == List(0, 1, 1, 2, 3, 5))
+      }
+    }
+
+    test("zipWith") {
+      test("sums ints") {
+        val r = zipWith(Stream(1, 2, 3))(Stream(4, 5))(_ + _)
+        val l = r.toList
+        assert(l == List(5, 7))
+        l
+      }
+    }
+
+    test("zipAll") {
+      test("use case") {
+        val r = zipAll(Stream(1, 2, 3))(Stream(4, 5))
+        val l = r.toList
+        assert(
+          l == List((Some(1), Some(4)), (Some(2), Some(5)), (Some(3), None))
+        )
+        l
+      }
+
+      test("full non-strictness") {
+        val (s1, heads1, tails1) = countedStream(List(1, 2, 3))
+        val (s2, heads2, tails2) = countedStream(List(1, 2))
+
+        zipAll(s1)(s2)
+
+        assert(heads1 == Map())
+        assert(heads2 == Map())
+        val t1 = tailCountToReadble(tails1)
+        val t2 = tailCountToReadble(tails2)
+        assert(t1 == Map())
+        assert(t2 == Map())
+      }
+    }
+
+    test("startsWith") {
+      test("positive case") {
+        val r = startsWith(Stream(1, 2, 3))(Stream(1, 2))
+        assert(r == true)
+      }
+      test("negative case") {
+        val r = startsWith(Stream(1, 2, 3))(Stream(2, 3))
+        assert(r == false)
+      }
+      test("negative treaky case: prefix longer than sequence") {
+        val r = startsWith(Stream(1))(Stream(1, 2))
+        assert(r == false)
+      }
+
+      test("non-strictness") {
+        test("positive case: evals heads and tails involved in comparison") {
+          val (s1, heads1, tails1 @ _) = countedStream(List(1, 2, 3, 4, 5, 6))
+          val (s2, heads2, tails2 @ _) = countedStream(List(1, 2))
+          s1.startsWith(s2)
+
+          // it's not `assert(heads1 == Map(1 -> 1, 2 -> 1))` since startsWith is `zipAll` and then `takeWhile`, and `zipAll` produces yet another value of (Some,None) for takeWhile to compare before cutting out the stream. But why it's evaluating the head, can't the underlying `unfold` generate the stream with lazy heads (and instances of head and tail still needs to be evaluated/generated in order to be pattern matched)? No, it's not a Stream[A] anymore then, but rather Stream[() => A].
+          assert(heads1 == Map(1 -> 1, 2 -> 1, 3 -> 1))
+          assert(heads2 == Map(1 -> 1, 2 -> 1))
+          val t1 = tailCountToReadble(tails1)
+          val t2 = tailCountToReadble(tails2)
+          assert(t1 == Map(Some(2) -> 1, Some(3) -> 1))
+          assert(t2 == Map(Some(2) -> 1, None -> 1))
+        }
+      }
+    }
+
+    test("tails") {
+      test("works") {
+        val r = tails(Stream(1, 2, 3)).toList.map(_.toList)
+        assert(r == List(List(1, 2, 3), List(2, 3), List(3), List()))
+        r
+      }
+      test(
+        "full non-stricness"
+      ) {
+        val (s, heads, rawTails @ _) = countedStream(List(1, 2, 3))
+        s.tails
+
+        assert(heads == Map())
+        assert(tailCountToReadble(rawTails) == Map())
+      }
+    }
+
+    test("hasSubsequence (aggregator of many functions)") {
+      test("positive") {
+        val r = hasSubsequence(Stream(1, 2, 3, 4, 5))(Stream(3, 4))
+        assert(r == true)
+      }
+      test("negative: normal") {
+        val r = hasSubsequence(Stream(1, 2, 3, 4, 5))(Stream(5, 6))
+        assert(r == false)
+      }
+      test("negative: incorrect input: sub is longer") {
+        val r = hasSubsequence(Stream(1))(Stream(1, 2))
+        assert(r == false)
+      }
+      test("non-strictness") {
+        test(
+          "only triggers heads and tails of this stream until matches and full head and tails of subsequence stream"
+        ) {
+          val (s1, heads1, rawTails1) = countedStream(List(1, 2, 3, 4, 5))
+          val (s2, heads2, rawTails2) = countedStream(List(2, 3))
+          s1 hasSubsequence s2
+
+          // expected: assert(heads1 == Map(1 -> 1, 2 -> 1, 3 -> 1)) , but since it depends on .startsWith
+          assert(heads1 == Map(1 -> 1, 2 -> 1, 3 -> 1, 4 -> 1))
+          assert(heads2 == Map(2 -> 1, 3 -> 1))
+
+          // expected: assert(tails1 == Map(Some(2) -> 1, Some(3) -> 1)) , but since it depends on .startsWith:
+          assert(
+            tailCountToReadble(rawTails1) == Map(
+              Some(2) -> 1,
+              Some(3) -> 1,
+              Some(4) -> 1
+            )
+          )
+          assert(tailCountToReadble(rawTails2) == Map(Some(3) -> 1, None -> 1))
+        }
+      }
+    }
+
+    test("exists") {
+      test("works") {
+        test("positive") {
+          val r = Stream(1, 2, 3).exists(_ % 2 == 0)
+          assert(r == true)
+          r
+        }
+
+        test("negative") {
+          val r = Stream(1, 2, 3).exists(_ == 4)
+          assert(r == false)
+          r
+        }
+      }
+
+      test("non-strictness: evals heads and tails only until matched") {
+        val (s, heads, tails) = countedStream(List(1, 2, 3, 4))
+        s.exists(_ % 2 == 0)
+
+        assert(heads == Map(1 -> 1, 2 -> 1))
+        val t = tailCountToReadble(tails)
+        assert(t == Map(Some(2) -> 1))
+      }
+
+      test(
+        "non-strictness: evals all heads and all tails if not matched at all"
+      ) {
+        val (s, heads, tails) = countedStream(List(1, 2, 3, 4))
+        s.exists(_ == 0)
+
+        assert(heads == Map(1 -> 1, 2 -> 1, 3 -> 1, 4 -> 1))
+        val t = tailCountToReadble(tails)
+        assert(t == Map(Some(2) -> 1, Some(3) -> 1, Some(4) -> 1, None -> 1))
       }
     }
   }

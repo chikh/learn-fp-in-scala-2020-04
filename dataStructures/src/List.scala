@@ -2,7 +2,9 @@ package dataStructures
 
 import scala.annotation.tailrec
 
-sealed trait List[+A]
+sealed trait List[+A] {
+  def map[B] = List.map[A, B](this) _
+}
 
 final case class Cons[A](head: A, tail: List[A]) extends List[A]
 case object Nil extends List[Nothing]

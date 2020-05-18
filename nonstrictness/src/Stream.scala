@@ -6,7 +6,7 @@ import dataStructures.{Option, None, Some}
 sealed trait Stream[+A] {
   def toList = Stream.toList(this)
   def take = Stream.take(this) _
-  def foldRight[B] = (z: B) => Stream.foldRight(this)(z) _
+  def foldRight[B] = Stream.foldRight[A, B](this) _
   def forAll = Stream.forAll(this) _
   def takeWhile = Stream.takeWhile(this) _
   def headOption = Stream.headOption(this)
@@ -14,6 +14,12 @@ sealed trait Stream[+A] {
   def filter = Stream.filter(this) _
   def append[B >: A] = Stream.append[B](this) _
   def flatMap[B] = Stream.flatMap[A, B](this) _
+  def zipWith[B >: A] = Stream.zipWith[B](this) _
+  def zipAll[B] = Stream.zipAll[A, B](this) _
+  def startsWith[B >: A] = Stream.startsWith[B](this) _
+  def tails = Stream.tails(this)
+  def exists = Stream.exists(this) _
+  def hasSubsequence[B >: A] = Stream.hasSubsequence[B](this) _
 }
 
 final case class Cons[A](h: () => A, t: () => Stream[A]) extends Stream[A]
@@ -82,9 +88,54 @@ object Stream {
     go(0, 1)
   }
 
-  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] =
+  def unfold[A, S](z: => S)(f: S => Option[(() => A, () => S)]): Stream[A] =
     f(z) match {
-      case Some((a, s)) => cons(a, unfold(s)(f))
+      case Some((a, s)) => cons(a(), unfold(s())(f))
       case None         => nil[A]
     }
+
+  def zipWith[A](s1: Stream[A])(s2: Stream[A])(f: (A, A) => A): Stream[A] =
+    unfold((s1, s2)) {
+      case (Nil, _) => None
+      case (_, Nil) => None
+      case (Cons(h1, t1), Cons(h2, t2)) =>
+        Some((() => f(h1(), h2()), () => (t1(), t2())))
+    }
+
+  def zipAll[A, B](
+      sa: Stream[A]
+  )(sb: Stream[B]): Stream[(Option[A], Option[B])] = unfold((sa, sb)) {
+    case (Nil, Cons(h, t)) =>
+      Some((() => (None, Some(h())), () => (nil[A], t())))
+    case (Cons(h, t), Nil) =>
+      Some((() => (Some(h()), None), () => (t(), nil[B])))
+    case (Cons(h1, t1), Cons(h2, t2)) =>
+      Some((() => (Some(h1()), Some(h2())), () => (t1(), t2())))
+    case _ => None
+  }
+
+  def startsWith[A](s: Stream[A])(prefix: Stream[A]): Boolean =
+    zipAll(s)(prefix)
+      .takeWhile {
+        case (_, Some(_)) => true
+        case _            => false
+      }
+      .forAll {
+        case (a1, a2) => a1 == a2
+      }
+
+  /**
+    * Another implementation option was: cons(s, unfold(...using only tails, not cons itself...)), but it uses quite low-level `cons` which not that elegant
+    */
+  def tails[A](s: Stream[A]): Stream[Stream[A]] =
+    unfold(s) {
+      case c @ Cons(_, t) => Some((() => c, () => t()))
+      case Nil            => None
+    } append Stream(nil)
+
+  def exists[A](s: Stream[A])(p: A => Boolean): Boolean =
+    foldRight(s)(false)((a, acc) => p(a) || acc)
+
+  def hasSubsequence[A](s: Stream[A])(sub: Stream[A]): Boolean =
+    s.tails exists (_ startsWith sub)
 }
