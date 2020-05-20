@@ -443,6 +443,30 @@ object StreamTests extends TestSuite {
         assert(t == Map(Some(2) -> 1, Some(3) -> 1, Some(4) -> 1, None -> 1))
       }
     }
+
+    test("scanRight") {
+      test("intermediate sums") {
+        val r = scanRight(Stream(1, 2, 3))(0)(_ + _).toList
+        assert(r == List(6, 5, 3, 0))
+      }
+      test("be like `tails`") {
+        test("works") {
+          val r =
+            scanRight(Stream(1, 2, 3))(nil[Int])(cons).toList.map(_.toList)
+          assert(r == List(List(1, 2, 3), List(2, 3), List(3), List()))
+          r
+        }
+        test("full strictness (without 'non')") {
+          val (s, heads, rawTails @ _) = countedStream(List(1, 2, 3))
+          s.scanRight(nil[Int])(cons)
+
+          // that's the difference: in .tails is was: assert(heads == Map())
+          assert(heads == Map(1 -> 1, 2 -> 1, 3 -> 1))
+          // that's the difference: in .tails is was: assert(tailCountToReadble(rawTails) == Map())
+          assert(tailCountToReadble(rawTails) == Map(Some(2) -> 1, Some(3) -> 1, None -> 1))
+        }
+      }
+    }
   }
 
   def assertNoElemets[A](counter: scala.collection.Map[A, Int]) = {

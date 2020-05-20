@@ -20,6 +20,7 @@ sealed trait Stream[+A] {
   def tails = Stream.tails(this)
   def exists = Stream.exists(this) _
   def hasSubsequence[B >: A] = Stream.hasSubsequence[B](this) _
+  def scanRight[B] = Stream.scanRight[A, B](this) _
 }
 
 final case class Cons[A](h: () => A, t: () => Stream[A]) extends Stream[A]
@@ -138,4 +139,20 @@ object Stream {
 
   def hasSubsequence[A](s: Stream[A])(sub: Stream[A]): Boolean =
     s.tails exists (_ startsWith sub)
+
+  // TODO: test it maybe
+  def scanLeft[A, B](s: Stream[A])(z: => B)(f: (=> A, => B) => B): Stream[B] =
+    cons(z, nil) append unfold((s, z)) {
+      case (Nil, _) => None
+      case (Cons(h, t), b) =>
+        lazy val nextB = f(h(), b)
+        Some((() => nextB, () => (t(), nextB)))
+    }
+
+  def scanRight[A, B](s: Stream[A])(z: => B)(f: (=> A, => B) => B): Stream[B] =
+    foldRight(s)((z, Stream(z))) {
+      case (a, (b, sb)) =>
+        lazy val nextB = f(a, b)
+        (nextB, cons(nextB, sb))
+    }._2
 }
