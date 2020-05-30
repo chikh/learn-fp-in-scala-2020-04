@@ -1,26 +1,21 @@
 import mill._, scalalib._
 
-object dataStructures extends CommonModule {
-  def scalaVersion = "2.13.2"
-
-  object test extends Tests {
-    def ivyDeps = Agg(ivy"com.lihaoyi::utest:0.7.4")
-    def testFrameworks = Seq("utest.runner.Framework")
-  }
-}
+object dataStructures extends CommonModule
 
 object nonstrictness extends CommonModule {
-  def scalaVersion = "2.13.2"
-
   def moduleDeps = Seq(dataStructures)
+}
+
+object rng extends CommonModule
+
+trait CommonModule extends ScalaModule {
+  def scalaVersion = "2.13.2"
 
   object test extends Tests {
     def ivyDeps = Agg(ivy"com.lihaoyi::utest:0.7.4")
     def testFrameworks = Seq("utest.runner.Framework")
   }
-}
 
-trait CommonModule extends ScalaModule {
   def scalacOptions = Seq(
     "-deprecation", // Emit warning and location for usages of deprecated APIs.
     "-encoding",
