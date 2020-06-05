@@ -8,7 +8,7 @@ object RNGTests extends TestSuite {
   override def tests: Tests = Tests {
     test("SimpleRNG generates reproducible random number") {
       (0 to 4242).foreach { _ =>
-        val (r, _) = SimpleRNG(42L).next
+        val (r, _) = SimpleRNG(42L).nextInt
         assert(r == 16159453)
       }
     }
