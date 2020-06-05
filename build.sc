@@ -6,7 +6,7 @@ object nonstrictness extends CommonModule {
   def moduleDeps = Seq(dataStructures)
 }
 
-object rng extends CommonModule
+object state extends CommonModule
 
 trait CommonModule extends ScalaModule {
   def scalaVersion = "2.13.2"
