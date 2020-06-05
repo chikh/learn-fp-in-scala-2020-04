@@ -24,6 +24,11 @@ object RNG {
 
   def both[A, B](ra: Rand[A], rb: Rand[B]) = map2(ra, rb)((_, _))
 
+  def sequence[A](l: List[Rand[A]]): Rand[List[A]] = l match {
+    case Nil => unit(Nil)
+    case h :: t => map2(h, sequence(t))(_ :: _)
+  }
+
   @tailrec
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
     val (i, nextRng) = int(rng)
@@ -31,7 +36,7 @@ object RNG {
     else (Math.abs(i), nextRng)
   }
 
-  def int: Rand[Int] = rng => rng.nextInt
+  def int: Rand[Int] = _.nextInt
 
   def double: Rand[Double] = map(nonNegativeInt)(_ / Int.MaxValue.toDouble)
   /*def double(rng: RNG): (Double, RNG) = {
@@ -46,13 +51,14 @@ object RNG {
     ((i, d), nextNextRng)
   }*/
 
-  def ints(n: Int)(rng: RNG): (List[Int], RNG) = {
+  def ints(n: Int): Rand[List[Int]] = sequence(List.fill(n)(int))
+  /*def ints(n: Int)(rng: RNG): (List[Int], RNG) = {
     if (n > 0) {
       val (i, nextRng) = rng.nextInt
       val (nextInts, nextNextRng) = ints(n - 1)(nextRng)
       (i :: nextInts, nextNextRng)
     } else (Nil, rng)
-  }
+  }*/
 }
 
 case class SimpleRNG(seed: Long) extends RNG {

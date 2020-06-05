@@ -40,6 +40,14 @@ object RNGTests extends TestSuite {
       assert(r == List(16159453, -1281479697, -340305902))
       r
     }
+
+    test("sequence") {
+      test("the same as ints") {
+        val (r, _) = sequence(List(int, int, int))(SimpleRNG(42L))
+        assert(r == List(16159453, -1281479697, -340305902))
+        r
+      }
+    }
   }
 
   def multipleAsserts[A](
