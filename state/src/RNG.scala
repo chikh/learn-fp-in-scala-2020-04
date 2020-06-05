@@ -16,12 +16,22 @@ object RNG {
     (f(a), nextRng)
   }
 
+  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = rng0 => {
+    val (a, rng1) = ra(rng0)
+    val (b, rng2) = rb(rng1)
+    (f(a, b), rng2)
+  }
+
+  def both[A, B](ra: Rand[A], rb: Rand[B]) = map2(ra, rb)((_, _))
+
   @tailrec
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
-    val (i, nextRng) = rng.nextInt
+    val (i, nextRng) = int(rng)
     if (i == Int.MinValue) nonNegativeInt(nextRng)
     else (Math.abs(i), nextRng)
   }
+
+  def int: Rand[Int] = rng => rng.nextInt
 
   def double: Rand[Double] = map(nonNegativeInt)(_ / Int.MaxValue.toDouble)
   /*def double(rng: RNG): (Double, RNG) = {
@@ -29,11 +39,12 @@ object RNG {
     (positiveInt / (Int.MaxValue: Double), nextRng)
   }*/
 
-  def intDouble(rng: RNG): ((Int, Double), RNG) = {
+  def intDouble: Rand[(Int, Double)] = both(int, double)
+  /*def intDouble(rng: RNG): ((Int, Double), RNG) = {
     val (i, nextRng) = rng.nextInt
     val (d, nextNextRng) = double(nextRng)
     ((i, d), nextNextRng)
-  }
+  }*/
 
   def ints(n: Int)(rng: RNG): (List[Int], RNG) = {
     if (n > 0) {
