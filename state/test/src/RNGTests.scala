@@ -18,7 +18,21 @@ object RNGTests extends TestSuite {
     }
 
     test("double") {
-      multipleAsserts(double, (r: Double) => r >= 0 && r <= 1, 424242)
+      test("between 0 and 1") {
+        multipleAsserts(double, (r: Double) => r >= 0 && r <= 1, 424242)
+      }
+
+      test("generates") {
+        val (d, _) = double(SimpleRNG(42L))
+        assert(d == 0.007524831689672932)
+        d
+      }
+    }
+
+    test("intDouble") {
+      val (r, _) = intDouble(SimpleRNG(42L))
+      assert(r == ((16159453, 0.5967354856416283)))
+      r
     }
 
     test("ints") {
@@ -28,16 +42,25 @@ object RNGTests extends TestSuite {
     }
   }
 
-  def multipleAsserts[A](f: RNG => (A, RNG), condition: A => Boolean, n: Int): Unit = {
-      @tailrec
-      def go(times: Int, rng: RNG): Unit = {
-        if (times > 0) {
-          val (r, nextRng) = f(rng)
-          assert(condition(r) == true)
-          go(times - 1, nextRng)
-        }
+  def multipleAsserts[A](
+      f: RNG => (A, RNG),
+      condition: A => Boolean,
+      n: Int
+  ): Unit = {
+    @tailrec
+    def go(times: Int, rng: RNG): Unit = {
+      if (times > 0) {
+        val (r, nextRng) = f(rng)
+        assert(condition(r) == true)
+        go(times - 1, nextRng)
       }
+    }
 
-      go(n, SimpleRNG(42L/*System.currentTimeMillis() will maybe fail the test in some cases :) */))
+    go(
+      n,
+      SimpleRNG(
+        42L /*System.currentTimeMillis() will maybe fail the test in some cases :) */
+      )
+    )
   }
 }

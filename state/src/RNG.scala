@@ -23,11 +23,17 @@ object RNG {
     else (Math.abs(i), nextRng)
   }
 
-  def double: Rand[Double]= map(nonNegativeInt)(_ / Int.MaxValue.toDouble)
+  def double: Rand[Double] = map(nonNegativeInt)(_ / Int.MaxValue.toDouble)
   /*def double(rng: RNG): (Double, RNG) = {
     val (positiveInt, nextRng) = nonNegativeInt(rng)
     (positiveInt / (Int.MaxValue: Double), nextRng)
   }*/
+
+  def intDouble(rng: RNG): ((Int, Double), RNG) = {
+    val (i, nextRng) = rng.nextInt
+    val (d, nextNextRng) = double(nextRng)
+    ((i, d), nextNextRng)
+  }
 
   def ints(n: Int)(rng: RNG): (List[Int], RNG) = {
     if (n > 0) {
