@@ -5,13 +5,13 @@ trait RNG {
 }
 
 object RNG {
-  type Rand[+A] = RNG => (A, RNG)
+  type Rand[+A] = State[RNG, A]
 
-  def unit[A](a: A): Rand[A] = rng => (a, rng)
+  def unit[A](a: A): Rand[A] = State { rng => (a, rng) }
 
-  def flatMap[A, B](ra: Rand[A])(f: A => Rand[B]): Rand[B] = rng => {
-    val (a, next) = ra(rng)
-    f(a)(next)
+  def flatMap[A, B](ra: Rand[A])(f: A => Rand[B]): Rand[B] = State { rng =>
+    val (a, next) = ra.run(rng)
+    f(a).run(next)
   }
 
   def map[A, B](s: Rand[A])(f: A => B): Rand[B] =
@@ -54,7 +54,7 @@ object RNG {
       else unit(Math.abs(i))
     )
 
-  def int: Rand[Int] = _.nextInt
+  def int: Rand[Int] = State { _.nextInt }
 
   def double: Rand[Double] = map(nonNegativeInt)(_ / Int.MaxValue.toDouble)
   /*def double(rng: RNG): (Double, RNG) = {

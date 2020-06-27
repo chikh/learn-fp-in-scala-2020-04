@@ -14,36 +14,36 @@ object RNGTests extends TestSuite {
     }
 
     test("non negative RNG") {
-      multipleAsserts(nonNegativeInt, (r: Int) => r >= 0, 424242)
+      multipleAsserts(nonNegativeInt.run, (r: Int) => r >= 0, 424242)
     }
 
     test("double") {
       test("between 0 and 1") {
-        multipleAsserts(double, (r: Double) => r >= 0 && r <= 1, 424242)
+        multipleAsserts(double.run, (r: Double) => r >= 0 && r <= 1, 424242)
       }
 
       test("generates") {
-        val (d, _) = double(SimpleRNG(42L))
+        val (d, _) = double.run(SimpleRNG(42L))
         assert(d == 0.007524831689672932)
         d
       }
     }
 
     test("intDouble") {
-      val (r, _) = intDouble(SimpleRNG(42L))
+      val (r, _) = intDouble.run(SimpleRNG(42L))
       assert(r == ((16159453, 0.5967354856416283)))
       r
     }
 
     test("ints") {
-      val (r, _) = ints(3)(SimpleRNG(42L))
+      val (r, _) = ints(3).run(SimpleRNG(42L))
       assert(r == List(16159453, -1281479697, -340305902))
       r
     }
 
     test("sequence") {
       test("the same as ints") {
-        val (r, _) = sequence(List(int, int, int))(SimpleRNG(42L))
+        val (r, _) = sequence(List(int, int, int)).run(SimpleRNG(42L))
         assert(r == List(16159453, -1281479697, -340305902))
         r
       }
@@ -51,11 +51,11 @@ object RNGTests extends TestSuite {
 
     test("map") {
       test("converts int gen to 'int dividable by 2' gen") {
-        multipleAsserts(map(int)(_ * 2), (i: Int) => i % 2 == 0, 1000)
+        multipleAsserts(map(int)(_ * 2).run, (i: Int) => i % 2 == 0, 1000)
       }
 
       test("reproducibility") {
-        val r = map(int)(_ * 2)(SimpleRNG(42L))._1
+        val r = map(int)(_ * 2).run(SimpleRNG(42L))._1
         assert(r == 32318906)
         r
       }
