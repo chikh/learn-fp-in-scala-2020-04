@@ -48,6 +48,18 @@ object RNGTests extends TestSuite {
         r
       }
     }
+
+    test("map") {
+      test("converts int gen to 'int dividable by 2' gen") {
+        multipleAsserts(map(int)(_ * 2), (i: Int) => i % 2 == 0, 1000)
+      }
+
+      test("reproducibility") {
+        val r = map(int)(_ * 2)(SimpleRNG(42L))._1
+        assert(r == 32318906)
+        r
+      }
+    }
   }
 
   def multipleAsserts[A](

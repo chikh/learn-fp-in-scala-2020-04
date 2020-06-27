@@ -1,6 +1,5 @@
 package state
 
-
 trait RNG {
   def nextInt: (Int, RNG)
 }
@@ -15,25 +14,32 @@ object RNG {
     f(a)(next)
   }
 
+  def map[A, B](s: Rand[A])(f: A => B): Rand[B] =
+    flatMap(s)(unit[B] _ compose f)
+  /*
   def map[A, B](s: Rand[A])(f: A => B): Rand[B] = rng => {
     val (a, nextRng) = s(rng)
     (f(a), nextRng)
   }
+   */
 
+  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    flatMap(ra)(a => map(rb)(b => f(a, b)))
+  /*
   def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
     rng0 => {
       val (a, rng1) = ra(rng0)
       val (b, rng2) = rb(rng1)
       (f(a, b), rng2)
     }
+   */
 
   def both[A, B](ra: Rand[A], rb: Rand[B]) = map2(ra, rb)((_, _))
 
-  def sequence[A](l: List[Rand[A]]): Rand[List[A]] = /*l match {
+  def sequence[A](l: List[Rand[A]]): Rand[List[A]] = l match {
     case Nil    => unit(Nil)
     case h :: t => map2(h, sequence(t))(_ :: _)
-  } // which is just the same as List.foldRight*/
-    l.foldRight(unit(Nil: List[A]))((ra, acc) => map2(ra, acc)(_ :: _))
+  }
 
   /*@tailrec
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
