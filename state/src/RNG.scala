@@ -1,6 +1,5 @@
 package state
 
-import scala.annotation.tailrec
 
 trait RNG {
   def nextInt: (Int, RNG)
@@ -11,16 +10,22 @@ object RNG {
 
   def unit[A](a: A): Rand[A] = rng => (a, rng)
 
+  def flatMap[A, B](ra: Rand[A])(f: A => Rand[B]): Rand[B] = rng => {
+    val (a, next) = ra(rng)
+    f(a)(next)
+  }
+
   def map[A, B](s: Rand[A])(f: A => B): Rand[B] = rng => {
     val (a, nextRng) = s(rng)
     (f(a), nextRng)
   }
 
-  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = rng0 => {
-    val (a, rng1) = ra(rng0)
-    val (b, rng2) = rb(rng1)
-    (f(a, b), rng2)
-  }
+  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    rng0 => {
+      val (a, rng1) = ra(rng0)
+      val (b, rng2) = rb(rng1)
+      (f(a, b), rng2)
+    }
 
   def both[A, B](ra: Rand[A], rb: Rand[B]) = map2(ra, rb)((_, _))
 
@@ -29,12 +34,18 @@ object RNG {
     case h :: t => map2(h, sequence(t))(_ :: _)
   }
 
-  @tailrec
+  /*@tailrec
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
     val (i, nextRng) = int(rng)
     if (i == Int.MinValue) nonNegativeInt(nextRng)
     else (Math.abs(i), nextRng)
-  }
+  }*/
+
+  def nonNegativeInt: Rand[Int] =
+    flatMap(int)(i =>
+      if (i == Int.MinValue) nonNegativeInt
+      else unit(Math.abs(i))
+    )
 
   def int: Rand[Int] = _.nextInt
 
