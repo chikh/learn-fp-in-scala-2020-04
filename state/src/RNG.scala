@@ -29,10 +29,11 @@ object RNG {
 
   def both[A, B](ra: Rand[A], rb: Rand[B]) = map2(ra, rb)((_, _))
 
-  def sequence[A](l: List[Rand[A]]): Rand[List[A]] = l match {
-    case Nil => unit(Nil)
+  def sequence[A](l: List[Rand[A]]): Rand[List[A]] = /*l match {
+    case Nil    => unit(Nil)
     case h :: t => map2(h, sequence(t))(_ :: _)
-  }
+  } // which is just the same as List.foldRight*/
+    l.foldRight(unit(Nil: List[A]))((ra, acc) => map2(ra, acc)(_ :: _))
 
   /*@tailrec
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
