@@ -15,21 +15,20 @@ case class Machine(locked: Locked, candies: Candies, coins: Coins)
 
 object Machine {
   def simulate(inputs: List[Input]): State[Machine, (Candies, Coins)] = {
-    val modifiers: List[State[Machine, ()]] = inputs.map {
-      case Insert => modify(unlockIfCandies)
-      case Turn => modify(dispenseIfUnlocked)
-    }
-
-    sequence(modifiers).flatMap(_ => get).map {
+    for {
+      _ <- sequence(inputs.map(modify[Machine] _ compose update))
+      s <- get
+    } yield s match {
       case Machine(_, candies, coins) => (candies, coins)
     }
   }
 
-  def unlockIfCandies: Machine => Machine = machine =>
-    if (machine.candies.value > 0) machine.copy(locked = Locked(false))
-    else machine
-
-  def dispenseIfUnlocked: Machine => Machine = machine =>
-    if (!machine.locked.value) machine.copy(candies = Candies(machine.candies.value - 1), coins = Coins(machine.coins.value + 1), locked = Locked(true))
-    else machine
+  def update: Input => Machine => Machine = input => machine =>
+    (input, machine) match {
+    case (Insert, m @ Machine(Locked(true), Candies(candies), _)) if candies > 0 =>
+      m.copy(locked = Locked(false))
+    case (Turn, m @ Machine(Locked(false), Candies(candies), Coins(coins))) =>
+      m.copy(locked = Locked(true), candies = Candies(candies - 1), coins = Coins(coins + 1))
+    case _ => machine
+  }
 }
