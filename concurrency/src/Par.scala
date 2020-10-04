@@ -1,31 +1,28 @@
 package concurrency
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
-
-sealed trait Par[A]
-
-case class InThisThread[A](a: A) extends Par[A]
-case class InNewThread[A](a: () => A) extends Par[A]
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 object Par {
-  def run[A](par: Par[A]): A = par match {
-    case InThisThread(a) => a
-    case InNewThread(a) => Await.result(Future(a())(scala.concurrent.ExecutionContext.global), Duration.Inf)
-  }
+  type Par[A] = ExecutorService => Future[A]
 
-  def fork[A](par: => Par[A]): Par[A] = InNewThread(() => run(par))
+  def run[A](par: Par[A])(es: ExecutorService): A = par(es).get
 
-  def unit[A](a: A): Par[A] = InThisThread(a)
+  def fork[A](par: => Par[A]): Par[A] = es => es.submit(() => par(es).get)
+
+  def unit[A](a: A): Par[A] = _ => new CompletedFuture(a)
 
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
-  def map2[A, B, C](parA: Par[A], parB: Par[B])(f: (A, B) => C): Par[C] = (parA, parB) match {
-    case (InThisThread(a), InThisThread(b)) => InThisThread(f(a, b))
-    case (InNewThread(a), InNewThread(b)) => InNewThread(() => f(a(), b()))
-    case (InThisThread(a), InNewThread(b)) => InNewThread(() => f(a, b()))
-    case (InNewThread(a), InThisThread(b)) => InNewThread(() => f(a(), b))
+  def map2[A, B, C](parA: Par[A], parB: Par[B])(f: (A, B) => C): Par[C] = es => {
+    val a = parA(es)
+    val b = parB(es)
+
+    new CompletedFuture(f(a.get, b.get))
   }
+
+  def map[A, B](f: A => B): Par[A] => Par[B] = parA => map2(parA, unit(()))((a, _) => f(a))
 
   def sequence[A](l: List[Par[A]]): Par[List[A]] =
     l.foldRight(unit(List.empty[A]))((parA, parList) => map2(parA, parList)(_ :: _))
@@ -39,4 +36,15 @@ object Par {
       val (l, r) = seq.splitAt(seq.length / 2)
       map2(sum(l), sum(r))(_ + _)
     }
+}
+
+class CompletedFuture[A](val get: A) extends Future[A] {
+
+  override def cancel(x: Boolean): Boolean = false
+
+  override def isCancelled(): Boolean = false
+
+  override def isDone(): Boolean = true
+
+  override def get(x$1: Long, x$2: TimeUnit): A = get
 }
