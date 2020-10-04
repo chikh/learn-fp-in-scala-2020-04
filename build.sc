@@ -8,6 +8,8 @@ object nonstrictness extends CommonModule {
 
 object state extends CommonModule
 
+object concurrency extends CommonModule
+
 trait CommonModule extends ScalaModule {
   def scalaVersion = "2.13.2"
 
