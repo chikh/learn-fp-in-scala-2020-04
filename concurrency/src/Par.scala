@@ -36,6 +36,27 @@ object Par {
       val (l, r) = seq.splitAt(seq.length / 2)
       map2(sum(l), sum(r))(_ + _)
     }
+
+  def parMap[A, B](as: List[A])(f: A => B): Par[List[B]] = fork {
+    sequence(as.map(asyncF(f)))
+  }
+
+  def parFilter[A](as: List[A])(p: A => Boolean): Par[List[A]] = /*
+  // The "straighforward" impl
+  fork {
+    val parP = asyncF(p)
+    as.foldRight(unit(List.empty[A]))((a, parListA) => map2(parP(a), parListA)((isKeep: Boolean, listA) => if (isKeep) a :: listA else listA))
+  }*/
+
+  // Let's reuse as.foldRight from #sequence
+  {
+    val parP: A => Par[List[A]] = asyncF { a =>
+      if (p(a)) List(a) else Nil
+    }
+
+    map[List[List[A]], List[A]](_.flatten)(sequence(as.map(parP)))
+
+  }
 }
 
 class CompletedFuture[A](val get: A) extends Future[A] {
