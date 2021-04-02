@@ -11,7 +11,7 @@ object state extends CommonModule
 object concurrency extends CommonModule
 
 trait CommonModule extends ScalaModule {
-  def scalaVersion = "2.13.2"
+  def scalaVersion = "2.13.5"
 
   object test extends Tests {
     def ivyDeps = Agg(ivy"com.lihaoyi::utest:0.7.4")
@@ -52,7 +52,7 @@ trait CommonModule extends ScalaModule {
     "-Ywarn-extra-implicit", // Warn when more than one implicit parameter section is defined.
     "-Xlint:inaccessible", // Warn about inaccessible types in method signatures.
     "-Xlint:infer-any", // Warn when a type argument is inferred to be `Any`.
-    "-Xlint:nullary-override", // Warn when non-nullary `def f()' overrides nullary `def f'.
+    // "-Xlint:nullary-override", // Warn when non-nullary `def f()' overrides nullary `def f'.
     "-Xlint:nullary-unit", // Warn when nullary methods return Unit.
     "-Ywarn-numeric-widen", // Warn when numerics are widened.
     "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
