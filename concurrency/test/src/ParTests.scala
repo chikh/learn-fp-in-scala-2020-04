@@ -187,5 +187,21 @@ object ParTests extends TestSuite {
         threadCount
       }
     }
+
+    test("words count") {
+      val (fixedPool, tf) = poolAndThreadFactory
+      val l = List("three words here", " ", "two here")
+      val r = run(wordsCount(l))(fixedPool)
+      val threadCount = tf.getCreatedThreadCount
+
+      test("works") {
+        assert(r == 5)
+      }
+
+      test("the amount of threads created is not less than collection size") {
+        assert(threadCount >= l.size)
+        threadCount
+      }
+    }
   }
 }

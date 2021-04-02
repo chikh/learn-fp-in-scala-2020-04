@@ -57,6 +57,10 @@ object Par {
       case (None, None) => None
     }
 
+  def wordsCount(s: List[String]): Par[Int] = parFoldRight(s.toIndexedSeq)(0)(
+    (line, count) => count + (line.split(" ").size)
+  )(_ + _)
+
   def parMap[A, B](as: List[A])(f: A => B): Par[List[B]] = fork {
     sequence(as.map(asyncF(f)))
   }
