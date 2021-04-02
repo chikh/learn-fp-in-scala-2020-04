@@ -22,19 +22,39 @@ object Par {
     new CompletedFuture(f(a.get, b.get))
   }
 
-  def map[A, B](f: A => B): Par[A] => Par[B] = parA => map2(parA, unit(()))((a, _) => f(a))
+  def map[A, B](f: A => B): Par[A] => Par[B] =
+    parA => map2(parA, unit(()))((a, _) => f(a))
 
   def sequence[A](l: List[Par[A]]): Par[List[A]] =
-    l.foldRight(unit(List.empty[A]))((parA, parList) => map2(parA, parList)(_ :: _))
+    l.foldRight(unit(List.empty[A]))(
+      (parA, parList) => map2(parA, parList)(_ :: _)
+    )
 
   def asyncF[A, B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
 
-  def sum(seq: IndexedSeq[Int]): Par[Int] =
+  def parFoldRight[A, B](seq: IndexedSeq[A])(z: B)(f: (A, B) => B)(combinator: (B, B) => B): Par[B] =
     if (seq.length <= 1) {
-      unit(seq.headOption getOrElse 0)
+      unit(seq.headOption.map(h => f(h, z)).getOrElse(z))
     } else {
       val (l, r) = seq.splitAt(seq.length / 2)
-      map2(fork(sum(l)), fork(sum(r)))(_ + _)
+
+      map2(
+        fork(parFoldRight(l)(z)(f)(combinator)),
+        fork(parFoldRight(r)(z)(f)(combinator))
+      )(combinator)
+    }
+
+  def sum(seq: IndexedSeq[Int]): Par[Int] = parFoldRight(seq)(0)(_ + _)(_ + _)
+
+  def parMax(seq: IndexedSeq[Int]): Par[Option[Int]] =
+    parFoldRight(seq)(None: Option[Int]) {
+      case (a, Some(b)) => Some(a max b)
+      case (a, None) => Some(a)
+    } {
+      case (Some(a), Some(b)) => Some(a max b)
+      case (Some(a), None) => Some(a)
+      case (None, Some(b)) => Some(b)
+      case (None, None) => None
     }
 
   def parMap[A, B](as: List[A])(f: A => B): Par[List[B]] = fork {

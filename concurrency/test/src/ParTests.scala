@@ -78,9 +78,62 @@ object ParTests extends TestSuite {
         r
       }
 
-      test("the amount of theads created is not less than collection size") {
+      test("the amount of threads created is not less than collection size") {
         assert(threadCount >= collection.size)
         threadCount
+      }
+    }
+
+    test("parallel max") {
+      test("non empty collection") {
+        val (fixedPool, tf) = poolAndThreadFactory
+        val collection = Vector(1, 2, 5, 3, 4)
+        val r = run(parMax(collection))(fixedPool)
+        val threadCount = tf.getCreatedThreadCount
+
+        test("the result is correct") {
+          assert(r == Some(5))
+          r
+        }
+
+        test("the amount of threads created is not less than collection size") {
+          assert(threadCount >= collection.size)
+          threadCount
+        }
+      }
+
+      test("empty collection") {
+        val (fixedPool, tf) = poolAndThreadFactory
+        val collection = Vector()
+        val r = run(parMax(collection))(fixedPool)
+        val threadCount = tf.getCreatedThreadCount
+
+        test("the result is correct") {
+          assert(r == None)
+          r
+        }
+
+        test("the amount of created threads is 0") {
+          assert(threadCount == 0)
+          threadCount
+        }
+      }
+
+      test("one item collection") {
+        val (fixedPool, tf) = poolAndThreadFactory
+        val collection = Vector(42)
+        val r = run(parMax(collection))(fixedPool)
+        val threadCount = tf.getCreatedThreadCount
+
+        test("the result is correct") {
+          assert(r == Some(42))
+          r
+        }
+
+        test("the amount of created threads is 0") {
+          assert(threadCount == 0)
+          threadCount
+        }
       }
     }
 
@@ -95,7 +148,7 @@ object ParTests extends TestSuite {
         r
       }
 
-      test("the amount of theads created is not less than collection size") {
+      test("the amount of threads created is not less than collection size") {
         assert(threadCount >= collection.size)
         threadCount
       }
@@ -112,7 +165,7 @@ object ParTests extends TestSuite {
         assert(r == l.map(f))
       }
 
-      test("the amount of theads created is not less than collection size") {
+      test("the amount of threads created is not less than collection size") {
         assert(threadCount >= l.size)
         threadCount
       }
@@ -129,7 +182,7 @@ object ParTests extends TestSuite {
         assert(r == l.filter(p))
       }
 
-      test("the amount of theads created is not less than collection size") {
+      test("the amount of threads created is not less than collection size") {
         assert(threadCount >= l.size)
         threadCount
       }
