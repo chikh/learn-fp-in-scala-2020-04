@@ -34,7 +34,7 @@ object Par {
       unit(seq.headOption getOrElse 0)
     } else {
       val (l, r) = seq.splitAt(seq.length / 2)
-      map2(sum(l), sum(r))(_ + _)
+      map2(fork(sum(l)), fork(sum(r)))(_ + _)
     }
 
   def parMap[A, B](as: List[A])(f: A => B): Par[List[B]] = fork {
