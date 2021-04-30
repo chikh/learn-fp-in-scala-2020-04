@@ -22,6 +22,16 @@ object Par {
     new CompletedFuture(f(a.get, b.get))
   }
 
+  def map3[A1, A2, A3, B](parA1: Par[A1], parA2: Par[A2], parA3: Par[A3])(f: (A1, A2, A3) => B): Par[B] =
+    map2(map2(parA1, parA2)((_, _)), parA3) {
+      case ((a1, a2), a3) => f(a1, a2, a3)
+    }
+
+  def map4[A1, A2, A3, A4, B](parA1: Par[A1], parA2: Par[A2], parA3: Par[A3], parA4: Par[A4])(f: (A1, A2, A3, A4) => B): Par[B] =
+    map2(map2(map2(parA1, parA2)((_, _)), parA3)((_,_)), parA4) {
+      case (((a1, a2), a3), a4) => f(a1, a2, a3, a4)
+    }
+
   def map[A, B](f: A => B): Par[A] => Par[B] =
     parA => map2(parA, unit(()))((a, _) => f(a))
 
