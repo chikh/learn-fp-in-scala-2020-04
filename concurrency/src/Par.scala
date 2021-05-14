@@ -91,6 +91,13 @@ object Par {
     map[List[List[A]], List[A]](_.flatten)(sequence(as.map(parP)))
 
   }
+
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    es => {
+      val computedN = run(n)(es)
+
+      choices(computedN)(es)
+    }
 }
 
 class CompletedFuture[A](val get: A) extends Future[A] {
