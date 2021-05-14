@@ -93,11 +93,13 @@ object Par {
   }
 
   def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
-    es => {
-      val computedN = run(n)(es)
+    chooser(n)(choices)
 
-      choices(computedN)(es)
-    }
+  def chooser[A, B](pa: Par[A])(choices: A => Par[B]): Par[B] = es => {
+    val a = run(pa)(es)
+
+    choices(a)(es)
+  }
 }
 
 class CompletedFuture[A](val get: A) extends Future[A] {
