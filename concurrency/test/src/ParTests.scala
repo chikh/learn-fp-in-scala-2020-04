@@ -22,20 +22,6 @@ object ParTests extends TestSuite {
     def getCreatedThreadCount = threadNumber.get() - 1
     private var namePrefix: String = _
 
-    def apply(): DefaultThreadFactory = {
-      val tf = new DefaultThreadFactory
-      val s = System.getSecurityManager()
-      tf.group =
-        if (s != null) s.getThreadGroup()
-        else
-          Thread.currentThread().getThreadGroup()
-      tf.namePrefix = "pool-" +
-        poolNumber.getAndIncrement() +
-        "-thread-"
-
-      tf
-    }
-
     def newThread(r: Runnable): Thread = {
       val t =
         new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0)
@@ -48,11 +34,27 @@ object ParTests extends TestSuite {
     }
   }
 
+  object DefaultThreadFactory {
+    def apply(): DefaultThreadFactory = {
+      val tf = new DefaultThreadFactory
+      val s = System.getSecurityManager()
+      tf.group =
+        if (s != null) s.getThreadGroup()
+        else
+          Thread.currentThread().getThreadGroup()
+      tf.namePrefix = "my-pool-" +
+        tf.poolNumber.getAndIncrement() +
+        "-thread-"
+
+      tf
+    }
+  }
+
   val nThreads = Int.MaxValue
 
   // Almost like Executors.newFixedThreadPool(Int.MaxValue) but number of thread are accessible
   def poolAndThreadFactory = {
-    val tf = new DefaultThreadFactory
+    val tf = DefaultThreadFactory()
     val pool = new ThreadPoolExecutor(
       nThreads,
       nThreads,
