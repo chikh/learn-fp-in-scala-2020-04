@@ -93,12 +93,15 @@ object Par {
   }
 
   def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
-    chooser(n)(choices)
+    flatMap(n)(choices)
 
-  def chooser[A, B](pa: Par[A])(choices: A => Par[B]): Par[B] = es => {
-    val a = run(pa)(es)
+  def flatMap[A, B](pa: Par[A])(choices: A => Par[B]): Par[B] = 
+    join(map(choices)(pa))
 
-    choices(a)(es)
+  def join[A](ppa: Par[Par[A]]): Par[A] = es => {
+    val pa = run(ppa)(es)
+
+    pa(es)
   }
 }
 
