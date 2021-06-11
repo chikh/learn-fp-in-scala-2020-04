@@ -21,6 +21,11 @@ object RNG {
 
   def int: Rand[Int] = State { _.nextInt }
 
+  def boolean: Rand[Boolean] = nonNegativeInt.map(_ % 2).map {
+    case 0 => false
+    case 1 => true
+  }
+
   def double: Rand[Double] = nonNegativeInt.map(_ / Int.MaxValue.toDouble)
   /*def double(rng: RNG): (Double, RNG) = {
     val (positiveInt, nextRng) = nonNegativeInt(rng)
