@@ -47,6 +47,9 @@ object RNG {
       (i :: nextInts, nextNextRng)
     } else (Nil, rng)
   }*/
+
+  def intInInterval(min: Int, maxExclusive: Int): State[RNG, Int] =
+    RNG.nonNegativeInt.map(_ % (maxExclusive - min)).map(_ + min)
 }
 
 case class SimpleRNG(seed: Long) extends RNG {

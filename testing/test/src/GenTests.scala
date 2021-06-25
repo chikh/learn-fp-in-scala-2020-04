@@ -13,7 +13,7 @@ object GenTests extends TestSuite {
         val maxExcl = 4
 
         val l = manyGeneratorStates(choose(min, maxExcl))
-        
+
         assert(l.run(SimpleRNG(42L))._1.forall(i => i >= min && i < maxExcl))
       }
     }
@@ -29,13 +29,23 @@ object GenTests extends TestSuite {
       val epsilonPart = 0.1
 
       test("approx. half should be true") {
-        assert(l.count(_ == true) > generatorTriggeredTimes * (0.5 - epsilonPart))
-        assert(l.count(_ == true) < generatorTriggeredTimes * (0.5 + epsilonPart))
+        assert(
+          l.count(_ == true) > generatorTriggeredTimes * (0.5 - epsilonPart)
+        )
+        assert(
+          l.count(_ == true) < generatorTriggeredTimes * (0.5 + epsilonPart)
+        )
       }
 
       test("approx. half should be false") {
-        assert(l.filter(_ == false).size > generatorTriggeredTimes * (0.5 - epsilonPart))
-        assert(l.filter(_ == false).size < generatorTriggeredTimes * (0.5 + epsilonPart))
+        assert(
+          l.filter(_ == false)
+            .size > generatorTriggeredTimes * (0.5 - epsilonPart)
+        )
+        assert(
+          l.filter(_ == false)
+            .size < generatorTriggeredTimes * (0.5 + epsilonPart)
+        )
       }
     }
 
@@ -44,10 +54,46 @@ object GenTests extends TestSuite {
       val maxExcl = 4
 
       val l = listOfN(generatorTriggeredTimes, choose(min, maxExcl)).state
-        
+
       test("should generate values in range [1, 4), so 1, 2 or 3") {
         assert(l.run(SimpleRNG(42L))._1.forall(i => i >= min && i < maxExcl))
       }
+    }
+
+    test("intPair") {
+      val min = 1
+      val maxExcl = 4
+
+      val l = manyGeneratorStates(intPair(min, maxExcl))
+
+      val r = l.run(SimpleRNG(42L))._1
+
+      test("should generate values in range [1, 4), so 1, 2 or 3") {
+        assert(r.forall {
+          case (i1, i2) =>
+            i1 >= min && i1 < maxExcl && i2 >= min && i2 < maxExcl
+        })
+      }
+
+      test("Numbers should be sometimes different in the pair") {
+        assert(r.exists { case (i1, i2) => i1 != i2 })
+      }
+    }
+
+    test("Gen[Option[A]] from Gen[A]") {
+      val a = boolean
+      val r = genOption(a)
+      val seed = SimpleRNG(42L)
+
+      assert(Some(a.state.run(seed)._1) == r.state.run(seed)._1)
+      r.state.run(seed)
+    }
+
+    test("string") {
+      val l = 42
+      val r = string(l).state.run(SimpleRNG(40L))._1
+      assert(r.length == l)
+      r
     }
   }
 

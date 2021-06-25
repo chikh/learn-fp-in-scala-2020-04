@@ -14,18 +14,35 @@ trait Prop {
     }
 }
 
-case class Gen[+A](state: State[RNG, A])
+case class Gen[+A](state: State[RNG, A]) {
+  def map[B](f: A => B) = Gen.map(f)(this)
+}
 
 object Gen {
-  def choose(min: Int, maxExclusive: Int): Gen[Int] = {
-    def intInInterval(min: Int, maxExclusive: Int): State[RNG, Int] =
-      RNG.nonNegativeInt.map(_ % (maxExclusive - min)).map(_ + min)
+  def choose(min: Int, maxExclusive: Int): Gen[Int] =
+    Gen(RNG.intInInterval(min, maxExclusive))
 
-    Gen(intInInterval(min, maxExclusive))
-  }
+  def intPair(min: Int, max: Int): Gen[(Int, Int)] =
+    Gen(State.both(RNG.intInInterval(min, max), RNG.intInInterval(min, max)))
 
   def unit[A](a: => A): Gen[A] = Gen(State.unit(a))
+
   def boolean: Gen[Boolean] = Gen(RNG.boolean)
+
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] =
     Gen(State.sequence(List.fill(n)(g.state)))
+
+  def genOption[A]: Gen[A] => Gen[Option[A]] = map(Option(_))
+
+  def map[A, B](f: A => B): Gen[A] => Gen[B] = genA => Gen(genA.state.map(f))
+
+  def genAfromOptionV1[A]: Gen[Option[A]] => Gen[A] =
+    genA => Gen(genA.state.map(_.getOrElse(???)))
+
+  def genAfromOptionV2[A]: Gen[Option[A]] => Gen[A] =
+    map(_.getOrElse(???))
+
+  def char: Gen[Char] = choose(21, 126).map(_.toChar)
+
+  def string(length: Int): Gen[String] = listOfN(length, char).map(_.mkString)
 }
