@@ -29,6 +29,18 @@ object Gen {
   def listOfN[A](n: Gen[Int]): Gen[A] => Gen[List[A]] =
     genA => n.flatMap(listOfN(_, genA))
 
+  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] =
+    boolean.flatMap(b => if (b) g1 else g2)
+
+  def weighted[A](g1: (Gen[A], Double), g2: (Gen[A], Double)): Gen[A] = {
+    val totalWeight = g1._2.abs + g2._2.abs
+    val w1 = g1._2 / totalWeight
+
+    double.flatMap(d => if (d <= w1) g1._1 else g2._1)
+  }
+
+  def double: Gen[Double] = Gen(RNG.double)
+
   def choose(min: Int, maxExclusive: Int): Gen[Int] =
     Gen(RNG.intInInterval(min, maxExclusive))
 
