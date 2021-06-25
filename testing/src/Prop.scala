@@ -16,9 +16,19 @@ trait Prop {
 
 case class Gen[+A](state: State[RNG, A]) {
   def map[B](f: A => B) = Gen.map(f)(this)
+
+  def flatMap[B](f: A => Gen[B]): Gen[B] = Gen.flatMap(f)(this)
 }
 
 object Gen {
+  def map[A, B](f: A => B): Gen[A] => Gen[B] = genA => Gen(genA.state.map(f))
+
+  def flatMap[A, B](f: A => Gen[B]): Gen[A] => Gen[B] =
+    genA => Gen(genA.state.flatMap(a => f(a).state))
+
+  def listOfN[A](n: Gen[Int]): Gen[A] => Gen[List[A]] =
+    genA => n.flatMap(listOfN(_, genA))
+
   def choose(min: Int, maxExclusive: Int): Gen[Int] =
     Gen(RNG.intInInterval(min, maxExclusive))
 
@@ -33,8 +43,6 @@ object Gen {
     Gen(State.sequence(List.fill(n)(g.state)))
 
   def genOption[A]: Gen[A] => Gen[Option[A]] = map(Option(_))
-
-  def map[A, B](f: A => B): Gen[A] => Gen[B] = genA => Gen(genA.state.map(f))
 
   def genAfromOptionV1[A]: Gen[Option[A]] => Gen[A] =
     genA => Gen(genA.state.map(_.getOrElse(???)))
