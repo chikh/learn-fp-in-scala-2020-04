@@ -2,16 +2,41 @@ package testing
 
 import state._
 
-trait Prop {
-  type SuccessCount = Int
-  type FailedItem = String
+sealed trait Result
 
-  def check: Either[(FailedItem, SuccessCount), SuccessCount]
+case class Failure(failedItem: Prop.FailedItem, successCount: Prop.SuccessCount)
+    extends Result
+case object Success extends Result
 
-  def &&(p: Prop): Prop =
-    new Prop {
-      def check = Prop.this.check.flatMap(count => p.check.map(_ + count))
+case class Prop(run: (Prop.NumberOfRuns, RNG) => Result) {
+  def &&(other: Prop): Prop =
+    Prop {
+      (numberOfRuns, rng) => this.run(numberOfRuns, rng) match {
+        case Success => other.run(numberOfRuns, rng) match {
+          case f: Failure => f.copy(successCount = numberOfRuns + f.successCount)
+          case s => s
+        }
+
+        case f: Failure => f
+      }
     }
+}
+
+object Prop {
+  type FailedItem = String
+  type SuccessCount = Int
+  type NumberOfRuns = Int
+
+  def forAll[A](g: Gen[A])(condition: A => Boolean): Prop = Prop {
+    (numberOfRuns, initialRNG) =>
+      Gen.listOfN(numberOfRuns, g).map(_.zipWithIndex.foldLeft(Success: Result) {
+        case (Success, (a, index)) =>
+          if (condition(a)) Success
+          else Failure(a.toString, index)
+
+        case (f: Failure, _) => f
+      }).state.run(initialRNG)._1
+  }
 }
 
 case class Gen[+A](state: State[RNG, A]) {
