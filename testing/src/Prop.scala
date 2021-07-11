@@ -1,6 +1,7 @@
 package testing
 
 import state._
+import scala.util.control.NonFatal
 
 sealed trait Result
 
@@ -10,12 +11,14 @@ case object Success extends Result
 
 case class Prop(run: (Prop.NumberOfRuns, RNG) => Result) {
   def &&(other: Prop): Prop =
-    Prop {
-      (numberOfRuns, rng) => this.run(numberOfRuns, rng) match {
-        case Success => other.run(numberOfRuns, rng) match {
-          case f: Failure => f.copy(successCount = numberOfRuns + f.successCount)
-          case s => s
-        }
+    Prop { (numberOfRuns, rng) =>
+      this.run(numberOfRuns, rng) match {
+        case Success =>
+          other.run(numberOfRuns, rng) match {
+            case f: Failure =>
+              f.copy(successCount = numberOfRuns + f.successCount)
+            case s => s
+          }
 
         case f: Failure => f
       }
@@ -27,16 +30,50 @@ object Prop {
   type SuccessCount = Int
   type NumberOfRuns = Int
 
+  def forAllUnlazy[A](g: Gen[A])(condition: A => Boolean): Prop = Prop {
+    (numberOfRuns, initialRNG) =>
+      Gen
+        .listOfN(numberOfRuns, g)
+        .map(_.zipWithIndex.foldLeft(Success: Result) {
+          case (Success, (a, index)) =>
+            if (condition(a)) Success
+            else Failure(a.toString, index)
+
+          case (f: Failure, _) => f
+        })
+        .state
+        .run(initialRNG)
+        ._1
+  }
+
   def forAll[A](g: Gen[A])(condition: A => Boolean): Prop = Prop {
     (numberOfRuns, initialRNG) =>
-      Gen.listOfN(numberOfRuns, g).map(_.zipWithIndex.foldLeft(Success: Result) {
-        case (Success, (a, index)) =>
-          if (condition(a)) Success
-          else Failure(a.toString, index)
-
-        case (f: Failure, _) => f
-      }).state.run(initialRNG)._1
+      randomStream(initialRNG)(g)
+        .zip(LazyList.from(0))
+        .take(numberOfRuns)
+        .map {
+          case (a, index) =>
+            try {
+              if (condition(a)) Success
+              else Failure(a.toString, index)
+            } catch {
+              case NonFatal(e) =>
+                Failure(
+                  s"test case: $a\nthrowed: ${e.getMessage}\nstacktrace:\n${e.getStackTrace
+                    .mkString("\n")}",
+                  index
+                )
+            }
+        }
+        .find {
+          case _: Failure => true
+          case _          => false
+        }
+        .getOrElse(Success)
   }
+
+  def randomStream[A](initialRNG: RNG)(g: Gen[A]): LazyList[A] =
+    LazyList.unfold(initialRNG)(rng => Some(g.state.run(rng)))
 }
 
 case class Gen[+A](state: State[RNG, A]) {

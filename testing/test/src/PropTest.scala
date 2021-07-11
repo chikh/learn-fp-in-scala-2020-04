@@ -23,7 +23,7 @@ object PropTests extends TestSuite {
           (counter, intSeqRNG(counter + 1))
       }
 
-      val r = forAll(Gen(RNG.int))(_ % 3 != 0).run(5, intSeqRNG(1))
+      val r = forAll(Gen(RNG.int))(_ % 3 != 0).run(42, intSeqRNG(1))
 
       assert(r == Failure("3", 2))
       r
