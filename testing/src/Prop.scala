@@ -98,10 +98,26 @@ object Prop {
     LazyList.unfold(initialRNG)(rng => Some(g.state.run(rng)))
 }
 
+case class SGen[+A](forSize: Int => Gen[A]) {
+  def map[B](f: A => B): SGen[B] = SGen {
+    i => this.forSize(i).map(f)
+  }
+
+  def flatMap[B](f: A => SGen[B]): SGen[B] = SGen {
+    i => this.forSize(i).flatMap(a => f(a).forSize(i))
+  }
+}
+
+object SGen {
+  def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(Gen.listOfN(_, g))
+}
+
 case class Gen[+A](state: State[RNG, A]) {
   def map[B](f: A => B) = Gen.map(f)(this)
 
   def flatMap[B](f: A => Gen[B]): Gen[B] = Gen.flatMap(f)(this)
+
+  def unsized: SGen[A] = SGen(_ => this)
 }
 
 object Gen {
