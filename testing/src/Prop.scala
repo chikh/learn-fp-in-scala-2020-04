@@ -2,14 +2,15 @@ package testing
 
 import state._
 import scala.util.control.NonFatal
+import Prop._
 
 sealed trait Result
 
-case class Failure(failedItem: Prop.FailedItem, successCount: Prop.SuccessCount)
+case class Failure(failedItem: FailedItem, successCount: SuccessCount)
     extends Result
 case object Success extends Result
 
-case class Prop(run: (Prop.NumberOfRuns, RNG) => Result) {
+case class Prop(run: (NumberOfRuns, RNG) => Result) {
   def &&(other: Prop): Prop =
     Prop { (numberOfRuns, rng) =>
       this.run(numberOfRuns, rng) match {
@@ -23,6 +24,24 @@ case class Prop(run: (Prop.NumberOfRuns, RNG) => Result) {
         case f: Failure => f
       }
     }
+
+  def ||(other: Prop): Prop = Prop { (n, rng) =>
+    this.run(n, rng) match {
+      case s @ Success => s
+      case Failure(firstFailureMessage, c) =>
+        other.tag(firstFailureMessage).run(n, rng) match {
+          case f: Failure  => f.copy(successCount = c + f.successCount)
+          case s @ Success => s
+        }
+    }
+  }
+
+  def tag(label: String) = Prop {
+    (n, rng) => this.run(n, rng) match {
+      case s @ Success => s
+      case f @ Failure(message, _) => f.copy(failedItem = s"$label\n$message")
+    }
+  }
 }
 
 object Prop {
@@ -30,6 +49,9 @@ object Prop {
   type SuccessCount = Int
   type NumberOfRuns = Int
 
+  /**
+    * This impl pulls (generates) all the values before executing condition function
+    */
   def forAllUnlazy[A](g: Gen[A])(condition: A => Boolean): Prop = Prop {
     (numberOfRuns, initialRNG) =>
       Gen
