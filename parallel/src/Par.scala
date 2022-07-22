@@ -1,7 +1,7 @@
 package parallel
 
-import java.util.concurrent.Executors
 import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
 
 case class Par[A](a: () => A, forked: Boolean)
 
@@ -15,17 +15,19 @@ object Par {
     case p => p
   }
 
-  def run[A](p: Par[A]): A = p match {
+  def run[A](p: Par[A])(implicit es: ExecutorService): A = p match {
     case Par(a, false) => a()
-    case Par(a, true) => Executors.newFixedThreadPool(1).submit(new Callable[A] {
+    case Par(a, true) => es.submit(new Callable[A] {
       override def call: A = a()
-    }).get()
+    }).get() // TODO: don't block ("sum in parallel" test should work even having < 3 threads in a pool)
   }
 
-  def map2[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C): Par[C] =
+  // TODO: implement without having to provide ExecutorService
+  def map2[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C)(implicit es: ExecutorService): Par[C] =
     unit(f(run(pa), run(pb)))
 
-  def parSum(s: IndexedSeq[Int]): Par[Int] = {
+  // TODO: implement without having to provide ExecutorService
+  def parSum(s: IndexedSeq[Int])(implicit es: ExecutorService): Par[Int] = {
     if (s.length <= 1) unit(s.headOption.getOrElse(0))
     else {
       val (l, r) = s.splitAt(s.length / 2)
