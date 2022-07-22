@@ -8,7 +8,7 @@ object nonstrictness extends CommonModule {
 
 object state extends CommonModule
 
-object concurrency extends CommonModule
+object parallel extends CommonModule
 
 object testing extends CommonModule {
   def moduleDeps = Seq(state)
