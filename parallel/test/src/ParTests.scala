@@ -31,5 +31,21 @@ object ParTests extends TestSuite {
       assert(cnt == 0)
       cnt
     }
+
+    test("sequence") {
+      val r = sequence(List(unit(1), unit(2), unit(3)))
+        .run(Executors.newFixedThreadPool(1))
+        .get
+
+      assert(r == List(1, 2, 3))
+    }
+
+    test("parFilter") {
+      val r = parFilter(List(1, 2, 3))(_ != 2)
+        .run(Executors.newFixedThreadPool(1))
+        .get
+
+      assert(r == List(1, 3))
+    }
   }
 }
